@@ -12,19 +12,14 @@ df = pd.read_csv(data_path, sep=';', index_col=0, parse_dates=['Data'], date_par
 # Data cleaning
 
 # %%
-# for i in range(len(df.RCE)):
-#     df.RCE[i] = df.RCE[i].replace(',', '')
-
 df['Time'] = pd.to_numeric(df['Time'], errors='coerce')
 df = df[df['Time'].notna()]
 df.RCE = df.RCE.astype(float)
 df.Time = df.Time.astype(int)
 df.index += df.Time.apply(lambda x: pd.Timedelta(f'{x}h'))
 df = df.drop('Time', axis=1)
-
 df = df.resample('1h').mean()
 
-# %%
 # df.groupby(by='Data').count()
 # df.asfreq(freq='30D')
 
@@ -92,10 +87,15 @@ controls = html.Div([
     className="d-grid h-auto gap-1 border"
 )
 
-graph = dcc.Graph(id='graph-content', 
-                  style={'height':'100%'},
-                  figure=fig,
-                  config={'scrollZoom': True, 'displayModeBar': True, 'displaylogo': False, 'locale': 'pl'})
+graph = dbc.Row([
+    dcc.Graph(id='graph-content', 
+        style={'height':'100%'},
+        figure=fig,
+        config={'scrollZoom': True, 'displayModeBar': True, 'displaylogo': False, 'locale': 'pl'}),
+    # html.Span('Najwyższa cena: '),
+    # html.Span(id='graph-bottom-text')
+])
+
 
 app.layout = dbc.Container(
     [
@@ -117,6 +117,7 @@ app.layout = dbc.Container(
 
 @app.callback(
     Output('graph-content', 'figure'),
+    # Output('graph-bottom-text', 'children'),
     Input('date-picker-range', 'start_date'),
     Input('date-picker-range', 'end_date'),
     Input('plot-type', 'value'),
@@ -138,18 +139,85 @@ def update_graph(start_date, end_date, plot_type, aggregation_type):
     else:
         fig = px.line(dff, labels={'variable':'Zmienna', 'value': 'Cena', 'index': 'Data'}, title='Wykres rynkowej ceny energii elektrycznej')
 
-    fig.update_layout(legend_title_text='Legenda')
+    # fig.update_layout(legend_title_text='Legenda')
     # fig.update_layout(showlegend=False)
 
     return fig
+    # return fig, dff.RCE.max()
 
 if __name__ == '__main__':
     app.run_server(debug=False)
 
+# %%
+from apscheduler.schedulers.background import BackgroundScheduler
+import urllib.request
+import time
+from datetime import date, timedelta, datetime
+import os
+import pandas as pd
+
+def get_data():
+    tomorrow = date.today() + timedelta(1)
+    next_day = tomorrow + timedelta(1)
+
+    first_day = tomorrow.strftime('%Y%m%d')
+    last_day = next_day.strftime('%Y%m%d')
+
+    # Replace with the actual download link
+    download_link = f'https://www.pse.pl/getcsv/-/export/csv/EN_PRICE/data_od/{first_day}/data_do/{last_day}'
+
+    # Download the file
+    urllib.request.urlretrieve(download_link, f'new-prices.csv')
+
+    # Wait for the download to complete
+    while True:
+        time.sleep(1)
+        if f'new-prices.csv.crdownload' not in os.listdir():
+            break
+
+def update_csv():
+    file1 = 'new-prices.csv'
+    file2 = 'prices.csv'
+
+    with open(file1, "r") as f:
+        rows = f.readlines()[1:]
+
+    target_file = open(file2, 'a')
+
+    for row in rows:
+        target_file.write(row)
+
+    target_file.close()
+
+def create_new_df():
+    data_path = 'new-prices.csv'
+    dateparse = lambda x: datetime.strptime(x, '%Y%m%d')
+
+    dff = pd.read_csv(data_path, sep=';', index_col=0, parse_dates=['Data'], date_parser=dateparse)
+
+    dff['Time'] = pd.to_numeric(dff['Time'], errors='coerce')
+    dff = dff[dff['Time'].notna()]
+    dff.RCE = dff.RCE.astype(float)
+    dff.Time = dff.Time.astype(int)
+    dff.index += dff.Time.apply(lambda x: pd.Timedelta(f'{x}h'))
+    dff = dff.drop('Time', axis=1)
+
+    return dff
+
+def update_data():
+    get_data()
+    update_csv()
+    global df
+    df = pd.concat([df, create_new_df()])
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(func=update_data, trigger='interval', days=1)
+scheduler.start()
+
+
 # %% [markdown]
 # do zrobienia:
 # - zmienic wyglad i dodac nowe funkcje
-# - docker
-# - sprobowac stworzyc obraz na dockerze
+# - flask scheduler do aktualizacji danych
 
 
