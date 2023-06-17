@@ -34,7 +34,7 @@ from dash_bootstrap_templates import load_figure_template
 import plotly.express as px
 import plotly.graph_objects as go
 
-from datetime import date
+from datetime import date, timedelta
 
 # %%
 meta_tags = [{"name": "viewport", "content": "width=device-width, initial-scale=1"}]
@@ -55,9 +55,9 @@ controls = html.Div([
             dcc.DatePickerRange(
                 id='date-picker-range',
                 min_date_allowed=date(2020, 1, 1),
-                max_date_allowed=date(2023, 5, 10),
+                max_date_allowed=date.today() + timedelta(1),
                 start_date=date(2020, 1, 1),
-                end_date=date(2023, 5, 10),
+                end_date=date.today() + timedelta(1),
                 className="d-flex justify-content-center",)
         ], className="px-3 pt-3"),
 
