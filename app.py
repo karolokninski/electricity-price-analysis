@@ -1,6 +1,34 @@
+# -*- coding: utf-8 -*-
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: -all
+#     custom_cell_magics: kql
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.11.2
+#   kernelspec:
+#     display_name: Python 3
+#     language: python
+#     name: python3
+# ---
+
 # %%
 import pandas as pd
-from datetime import datetime
+from apscheduler.schedulers.background import BackgroundScheduler
+import urllib.request
+import time
+from datetime import date, timedelta, datetime
+import os
+from jupyter_dash import JupyterDash
+from dash import Dash, html, dcc, callback, Output, Input
+import dash_bootstrap_components as dbc
+from dash_bootstrap_templates import load_figure_template
+import plotly.express as px
+import plotly.graph_objects as go
+from pytz import utc
 
 # %%
 data_path = 'prices.csv'
@@ -16,7 +44,7 @@ df['Time'] = pd.to_numeric(df['Time'], errors='coerce')
 df = df[df['Time'].notna()]
 df.RCE = df.RCE.astype(float)
 df.Time = df.Time.astype(int)
-df.index += df.Time.apply(lambda x: pd.Timedelta(f'{x}h'))
+df.index += df.Time.apply(lambda x: pd.Timedelta(f'{x-1}h'))
 df = df.drop('Time', axis=1)
 df = df.resample('1h').mean()
 
@@ -27,27 +55,73 @@ df = df.resample('1h').mean()
 # Creating a dash app
 
 # %%
-from dash import Dash, html, dcc, callback, Output, Input
-import dash_bootstrap_components as dbc
-from dash_bootstrap_templates import load_figure_template
+def get_data():
+    tomorrow = date.today() + timedelta(1)
+    next_day = tomorrow + timedelta(1)
 
-import plotly.express as px
-import plotly.graph_objects as go
+    first_day = tomorrow.strftime('%Y%m%d')
+    last_day = next_day.strftime('%Y%m%d')
 
-from datetime import date, timedelta
+    # Replace with the actual download link
+    download_link = f'https://www.pse.pl/getcsv/-/export/csv/EN_PRICE/data_od/{first_day}/data_do/{last_day}'
+
+    # Download the file
+    urllib.request.urlretrieve(download_link, f'new-prices.csv')
+
+    # Wait for the download to complete
+    while True:
+        time.sleep(1)
+        if f'new-prices.csv.crdownload' not in os.listdir():
+            break
+
+def update_csv():
+    file1 = 'new-prices.csv'
+    file2 = 'prices.csv'
+
+    with open(file1, "r") as f:
+        rows = f.readlines()[1:]
+
+    target_file = open(file2, 'a')
+
+    for row in rows:
+        target_file.write(row)
+
+    target_file.close()
+
+def create_new_df():
+    data_path = 'new-prices.csv'
+    dateparse = lambda x: datetime.strptime(x, '%Y%m%d')
+
+    dff = pd.read_csv(data_path, sep=';', index_col=0, parse_dates=['Data'], date_parser=dateparse)
+
+    dff['Time'] = pd.to_numeric(dff['Time'], errors='coerce')
+    dff = dff[dff['Time'].notna()]
+    dff.RCE = dff.RCE.astype(float)
+    dff.Time = dff.Time.astype(int)
+    dff.index += dff.Time.apply(lambda x: pd.Timedelta(f'{x-1}h'))
+    dff = dff.drop('Time', axis=1)
+
+    return dff
+
+def update_data():
+    print("Updating...")
+    get_data()
+    update_csv()
+    global df
+    df = pd.concat([df, create_new_df()])
+    print("Done.")
 
 # %%
 meta_tags = [{"name": "viewport", "content": "width=device-width, initial-scale=1"}]
 load_figure_template("materia")
 external_stylesheets = [dbc.themes.MATERIA]
 
-app = Dash(__name__, meta_tags=meta_tags, external_stylesheets=external_stylesheets)
-server = app.server
+app = JupyterDash(__name__, meta_tags=meta_tags, external_stylesheets=external_stylesheets)
 
 fig = go.Figure()
 fig = px.scatter(df, labels={'variable':'Zmienna', 'value': 'Cena', 'index': 'Data'}, title='Wykres rynkowej ceny energii elektrycznej')
 fig.update_layout(legend_title_text='Legenda')
-# fig.update_layout(showlegend=False)
+fig.update_layout(showlegend=False)
 
 controls = html.Div([
         html.Div([
@@ -139,85 +213,21 @@ def update_graph(start_date, end_date, plot_type, aggregation_type):
     else:
         fig = px.line(dff, labels={'variable':'Zmienna', 'value': 'Cena', 'index': 'Data'}, title='Wykres rynkowej ceny energii elektrycznej')
 
-    # fig.update_layout(legend_title_text='Legenda')
-    # fig.update_layout(showlegend=False)
+    fig.update_layout(legend_title_text='Legenda')
+    fig.update_layout(showlegend=False)
 
     return fig
     # return fig, dff.RCE.max()
 
+
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    app.run_server(debug=True)
 
-# %%
-from apscheduler.schedulers.background import BackgroundScheduler
-import urllib.request
-import time
-from datetime import date, timedelta, datetime
-import os
-import pandas as pd
-
-def get_data():
-    tomorrow = date.today() + timedelta(1)
-    next_day = tomorrow + timedelta(1)
-
-    first_day = tomorrow.strftime('%Y%m%d')
-    last_day = next_day.strftime('%Y%m%d')
-
-    # Replace with the actual download link
-    download_link = f'https://www.pse.pl/getcsv/-/export/csv/EN_PRICE/data_od/{first_day}/data_do/{last_day}'
-
-    # Download the file
-    urllib.request.urlretrieve(download_link, f'new-prices.csv')
-
-    # Wait for the download to complete
-    while True:
-        time.sleep(1)
-        if f'new-prices.csv.crdownload' not in os.listdir():
-            break
-
-def update_csv():
-    file1 = 'new-prices.csv'
-    file2 = 'prices.csv'
-
-    with open(file1, "r") as f:
-        rows = f.readlines()[1:]
-
-    target_file = open(file2, 'a')
-
-    for row in rows:
-        target_file.write(row)
-
-    target_file.close()
-
-def create_new_df():
-    data_path = 'new-prices.csv'
-    dateparse = lambda x: datetime.strptime(x, '%Y%m%d')
-
-    dff = pd.read_csv(data_path, sep=';', index_col=0, parse_dates=['Data'], date_parser=dateparse)
-
-    dff['Time'] = pd.to_numeric(dff['Time'], errors='coerce')
-    dff = dff[dff['Time'].notna()]
-    dff.RCE = dff.RCE.astype(float)
-    dff.Time = dff.Time.astype(int)
-    dff.index += dff.Time.apply(lambda x: pd.Timedelta(f'{x}h'))
-    dff = dff.drop('Time', axis=1)
-
-    return dff
-
-def update_data():
-    get_data()
-    update_csv()
-    global df
-    df = pd.concat([df, create_new_df()])
-
-scheduler = BackgroundScheduler()
-scheduler.add_job(func=update_data, trigger='interval', days=1)
-scheduler.start()
-
+    scheduler = BackgroundScheduler()
+    scheduler.configure(timezone=utc)
+    scheduler.add_job(update_data, 'interval', days=1)
+    scheduler.start()
 
 # %% [markdown]
 # do zrobienia:
 # - zmienic wyglad i dodac nowe funkcje
-# - flask scheduler do aktualizacji danych
-
-
