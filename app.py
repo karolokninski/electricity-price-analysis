@@ -9,10 +9,6 @@
 #       format_name: percent
 #       format_version: '1.3'
 #       jupytext_version: 1.11.2
-#   kernelspec:
-#     display_name: Python 3
-#     language: python
-#     name: python3
 # ---
 
 # %%
@@ -22,7 +18,6 @@ import urllib.request
 import time
 from datetime import date, timedelta, datetime
 import os
-from jupyter_dash import JupyterDash
 from dash import Dash, html, dcc, callback, Output, Input
 import dash_bootstrap_components as dbc
 from dash_bootstrap_templates import load_figure_template
@@ -116,7 +111,8 @@ meta_tags = [{"name": "viewport", "content": "width=device-width, initial-scale=
 load_figure_template("materia")
 external_stylesheets = [dbc.themes.MATERIA]
 
-app = JupyterDash(__name__, meta_tags=meta_tags, external_stylesheets=external_stylesheets)
+app = Dash(__name__, meta_tags=meta_tags, external_stylesheets=external_stylesheets)
+server = app.server
 
 fig = go.Figure()
 fig = px.scatter(df, labels={'variable':'Zmienna', 'value': 'Cena', 'index': 'Data'}, title='Wykres rynkowej ceny energii elektrycznej')
@@ -219,9 +215,8 @@ def update_graph(start_date, end_date, plot_type, aggregation_type):
     return fig
     # return fig, dff.RCE.max()
 
-
-if __name__ == '__main__':
-    app.run_server(debug=True)
+if __name__ == 'app':
+    # app.run_server(debug=True)
 
     scheduler = BackgroundScheduler()
     scheduler.configure(timezone=utc)
