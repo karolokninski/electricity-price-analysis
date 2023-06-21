@@ -114,19 +114,51 @@ external_stylesheets = [dbc.themes.MATERIA]
 app = Dash(__name__, meta_tags=meta_tags, external_stylesheets=external_stylesheets)
 server = app.server
 
-fig = go.Figure()
-fig = px.scatter(df, labels={'variable':'Zmienna', 'value': 'Cena', 'index': 'Data'}, title='Wykres rynkowej ceny energii elektrycznej')
-fig.update_layout(legend_title_text='Legenda')
-fig.update_layout(showlegend=False)
+layout = dict(
+    title='Wykres rynkowej ceny energii elektrycznej',
+    legend_title_text='Legenda',
+    xaxis=dict(
+        rangeselector=dict(
+            buttons=list([
+                dict(count=1,
+                    label='1m',
+                    step='month',
+                    stepmode='backward'),
+                dict(count=6,
+                    label='6m',
+                    step='month',
+                    stepmode='backward'),
+                dict(count=1,
+                    label='YTD',
+                    step='year',
+                    stepmode='todate'),
+                dict(count=1,
+                    label='1y',
+                    step='year',
+                    stepmode='backward'),
+                dict(count=3,
+                    label='3y',
+                    step='year',
+                    stepmode='backward'),
+                dict(step='all')
+            ])
+        ),
+        rangeslider=dict(
+            visible = True
+        ),
+        type='date',
+    )
+)
+
 
 controls = html.Div([
         html.Div([
             html.H5('Zakres dat:'),
             dcc.DatePickerRange(
                 id='date-picker-range',
-                min_date_allowed=date(2020, 1, 1),
+                min_date_allowed=date(2018, 1, 1),
                 max_date_allowed=date.today() + timedelta(1),
-                start_date=date(2020, 1, 1),
+                start_date=date(2018, 1, 1),
                 end_date=date.today() + timedelta(1),
                 className="d-flex justify-content-center",)
         ], className="px-3 pt-3"),
@@ -138,7 +170,7 @@ controls = html.Div([
             dcc.Dropdown(
                 id='aggregation-type',
                 options=['Godzinowa', 'Dzienna', 'Tygodniowa', 'Miesięczna', 'Roczna'],
-                value='Godzinowa')
+                value='Dzienna')
         ], className="px-3"),
 
         html.Hr(),
@@ -148,7 +180,7 @@ controls = html.Div([
             html.Div([
                 dcc.RadioItems(
                     ['Punktowy', 'Liniowy'],
-                    'Punktowy',
+                    'Liniowy',
                     id='plot-type',
                     labelStyle={'display': 'inline-block', 'margin':'8px', 'margin-right':'16px'})
             ], className="d-flex align-items-center border"),
@@ -157,11 +189,11 @@ controls = html.Div([
     className="d-grid h-auto gap-1 border"
 )
 
-graph = dbc.Row([
-    dcc.Graph(id='graph-content', 
-        style={'height':'100%'},
-        figure=fig,
-        config={'scrollZoom': True, 'displayModeBar': True, 'displaylogo': False, 'locale': 'pl'}),
+graph = html.Div([
+    dcc.Graph(id='graph-content',
+        config={'scrollZoom': True, 'displayModeBar': True, 'displaylogo': False, 'locale': 'pl'},
+    ),
+
     # html.Span('Najwyższa cena: '),
     # html.Span(id='graph-bottom-text')
 ])
@@ -174,7 +206,7 @@ app.layout = dbc.Container(
         dbc.Row(
             [
                 dbc.Col(controls, className='col-12 col-lg-3'),
-                dbc.Col(graph, className='col-12 col-lg-9 h-75'),
+                dbc.Col(graph, className='col-12 col-lg-9'),
             ],
             align="center",
             className='h-100',
@@ -201,16 +233,13 @@ def update_graph(start_date, end_date, plot_type, aggregation_type):
 
     dff = dff.resample(dic[aggregation_type]).mean()
 
-    fig = go.Figure()
-
     if plot_type == 'Punktowy':
         fig = px.scatter(dff, labels={'variable':'Zmienna', 'value': 'Cena', 'index': 'Data'}, title='Wykres rynkowej ceny energii elektrycznej')
 
     else:
-        fig = px.line(dff, labels={'variable':'Zmienna', 'value': 'Cena', 'index': 'Data'}, title='Wykres rynkowej ceny energii elektrycznej')
+        fig = px.line(dff, labels={'variable':'Zmienna', 'value': 'Cena', 'index': 'Data'}, title='Wykres rynkowej ceny energii elektrycznej', height=600)
 
-    fig.update_layout(legend_title_text='Legenda')
-    fig.update_layout(showlegend=False)
+    fig.update_layout(layout)
 
     return fig
     # return fig, dff.RCE.max()
