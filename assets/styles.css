@@ -1,11 +1,21 @@
-body {
-    margin: 0;
-}
-
 h1, h5 {
     color: rgb(0, 100, 255);
 }
 
 #plot-type input {
     margin-right: 5px;
+}
+
+.slidery * {
+    width: 100%;
+}
+
+.slidery {
+    display: flex;
+    flex-direction: row;
+    align-content: stretch;
+}
+
+.rc-slider-mark {
+    width: 0px;
 }
