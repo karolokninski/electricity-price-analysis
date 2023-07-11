@@ -48,6 +48,7 @@ meta_tags = [{"name": "viewport", "content": "width=device-width, initial-scale=
 external_stylesheets = [dbc.themes.BOOTSTRAP]
 
 app = Dash(__name__, meta_tags=meta_tags, external_stylesheets=external_stylesheets)
+app.title = "Kalkulator fotowoltaiki"
 server = app.server
 
 layout = dict(
@@ -253,7 +254,7 @@ graphs_profit = html.Div([
 ])
 
 app.layout = dbc.Container([
-        html.H1('Dash Tabs component demo'),
+        html.Br(),
         dcc.Tabs([
             dcc.Tab(label="Rynkowa cena energii elektrycznej (RCE)", children=[
                 html.Br(),
