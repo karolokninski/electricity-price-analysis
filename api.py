@@ -1,18 +1,34 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, abort
 import pandas as pd
 import requests
 import json
+import os
 
 app = Flask(__name__)
 
+API_KEY = os.environ['API_SECRET']
+WEATHER_API_KEY = os.environ['WEATHER_API_SECRET']
+
+def require_token(func, *args, **kwargs):
+    def wrapper():
+        if 'Authorization' in request.headers and request.headers['Authorization'] == f'Bearer {API_KEY}':
+            return func(*args, **kwargs)
+
+        else:
+            abort(401, description="Error message you want the reader to receive.")
+        
+    return wrapper
+
 @app.route('/estimate', methods=['POST'])
+@require_token
 def estimate():
     request_data = request.json
 
-    from_csv = 0
+    from_csv = 1
 
     if from_csv:
         weather_df = pd.read_csv('weather_data.csv', index_col='time', parse_dates=True)
+        weather_df = weather_df[request_data['start']:request_data['end']]
 
     else:
         r = requests.get('https://api.oikolab.com/weather',
@@ -21,7 +37,7 @@ def estimate():
                                 'end': request_data['end'],
                                 'lat': request_data['lat'],
                                 'lon': request_data['lon'],
-                                'api-key': '1a51c2dfacad40b59b950908a3c4a0dd'}
+                                'api-key': WEATHER_API_KEY}
         )
 
         weather_data = json.loads(r.json()['data'])
@@ -35,8 +51,6 @@ def estimate():
     weather_df.index += pd.Timedelta(hours=2) # convert from UTC to UTC+2
                                               # mozliwe, ze trzeba bedzie sczytywac strefe czasowa z koordynatow (lat, long)
 
-    print(weather_df.index[0])
-    print(type(weather_df.index[0]))
     eff_table = pd.read_csv('efficiency_table.csv', index_col='angle')
 
     Wp = request_data['peak_power']
