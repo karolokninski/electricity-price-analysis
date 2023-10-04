@@ -6,7 +6,7 @@
 
 ### 2. Run container
 
-`docker run --env API_SECRET=API_key_here --env WEATHER_API_SECRET=API_key_here --env AZURE_DB_PWD=db_pwd_here -it --rm -p 80:80 api`
+`docker run --env API_SECRET=API_key_here --env WEATHER_API_SECRET=API_key_here --env AZURE_DB_PWD=db_pwd_here --env EMAIL_PWD=email_pwd_here -it --rm -p 80:80 api`
 
 ### Calculate PV production and profit
 
@@ -75,7 +75,15 @@ response = requests.post(url, json=request_data, headers={'Authorization': 'Bear
 http://api-rce.azurewebsites.net:80/api/save_email
 
 
-### Request format for /api/estimate
+### Request format for /api/save_email
+
+```
+request_data = {
+    'email': 'test@test.pl'
+}
+```
+
+or
 
 ```
 request_data = {
@@ -83,7 +91,7 @@ request_data = {
 }
 ```
 
-### Response format for /api/estimate
+### Response format for /api/save_email
 
 ```
 response = {

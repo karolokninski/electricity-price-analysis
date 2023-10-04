@@ -15,7 +15,7 @@ RUN apt-get update && \
     ACCEPT_EULA=Y apt-get install -y msodbcsql18 && \
     ACCEPT_EULA=Y apt-get install -y mssql-tools18
 
-COPY api_with_profit.py /home/app/api.py
+COPY api.py /home/app/api.py
 COPY weather_data.csv /home/app/weather_data.csv
 COPY efficiency_table.csv /home/app/efficiency_table.csv
 
