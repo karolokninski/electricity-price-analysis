@@ -1,7 +1,16 @@
-Flask==2.3.2
-flask-cors==4.0.0
+# DO NOT include azure-functions-worker in this file
+# The Python Worker is managed by Azure Functions platform
+# Manually managing azure-functions-worker may cause unexpected issues
+
+azure-functions==1.15.0
+msrest==0.7.1
+msrestazure==0.6.4
+azure-common==1.1.28
+azure-core==1.28.0
+azure-identity==1.13.0
+azure-keyvault-secrets==4.7.0
+azure-storage-blob==12.17.0
 pandas==2.0.1
-requests==2.31.0
 urllib3==2.0.3
 SQLAlchemy==2.0.17
 pyodbc==4.0.39
